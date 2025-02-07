@@ -1,0 +1,13 @@
+[package]
+name = "semaphore-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.95"
+ethers-core = "2.0.14"
+light-poseidon = "0.3.0"
+num-bigint = "0.4.6"
+ruint = "1.12.4"
+leanimt-rs = { git = "https://github.com/vplasencia/leanimt-rs" } 
+ark-bn254 = "0.5.0"
