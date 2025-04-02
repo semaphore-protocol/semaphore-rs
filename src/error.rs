@@ -4,26 +4,14 @@ use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum SemaphoreError {
-    #[error("Array too long")]
-    ArrayTooLong,
-    #[error("Field element conversion error")]
-    FieldConversionError,
-    #[error("Hex decoding error: {0}")]
-    HexDecodingError(String),
-    #[error("Invalid field element format: {0}")]
-    InvalidFieldFormat(String),
-    #[error("Invalid field element length: got {actual}, expected {expected}")]
-    InvalidFieldLength { actual: usize, expected: usize },
-    #[error("Public key is not on curve")]
-    InvalidPublicKey,
-    #[error("Signature is invalid")]
-    InvalidSignature,
-    #[error("Leaf index is greater than the tree size")]
-    LeafIndexGreaterThanTreeSize,
-    #[error("Message should be less than 32 bytes")]
-    MessageTooLong,
-    #[error("Private key import error: {0}")]
-    PrivateKeyImportError(String),
-    #[error("Signature is not on curve")]
-    SignatureNotOnCurve,
+    #[error("Input array of size {0} exceeds maximum allowed length of 32 bytes")]
+    InputSizeExceeded(usize),
+    #[error("Public key validation failed: point is not on curve")]
+    PublicKeyNotOnCurve,
+    #[error("Signature verification failed")]
+    SignatureVerificationFailed,
+    #[error("Message of size {0} exceeds maximum allowed length of 32 bytes")]
+    MessageSizeExceeded(usize),
+    #[error("Signature point R is not on curve")]
+    SignaturePointNotOnCurve,
 }

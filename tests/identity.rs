@@ -176,7 +176,7 @@ mod identity {
             provided_signature
                 .verify(identity.public_key(), &invalid_message)
                 .unwrap_err(),
-            SemaphoreError::InvalidSignature
+            SemaphoreError::SignatureVerificationFailed
         );
 
         let long_message = [0u8; 33];
@@ -184,7 +184,7 @@ mod identity {
             provided_signature
                 .verify(identity.public_key(), &long_message)
                 .unwrap_err(),
-            SemaphoreError::MessageTooLong
+            SemaphoreError::MessageSizeExceeded(33)
         );
 
         let invalid_signature = Signature {
@@ -195,7 +195,7 @@ mod identity {
             invalid_signature
                 .verify(identity.public_key(), &MESSAGE_BYTES)
                 .unwrap_err(),
-            SemaphoreError::SignatureNotOnCurve
+            SemaphoreError::SignaturePointNotOnCurve
         );
     }
 }

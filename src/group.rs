@@ -49,7 +49,7 @@ pub fn fq_to_leaf(fq: &Fq) -> Leaf {
 /// Bytes to leaf
 pub fn bytes_to_leaf(bytes: &[u8]) -> Result<Leaf, SemaphoreError> {
     if bytes.len() > ELEMENT_SIZE {
-        return Err(SemaphoreError::ArrayTooLong);
+        return Err(SemaphoreError::InputSizeExceeded(bytes.len()));
     }
 
     let mut leaf = [0u8; ELEMENT_SIZE];
@@ -86,7 +86,7 @@ mod tests {
 
         let test_wrong_value: [u8; 33] = [1; 33];
         let wrong_leaf = bytes_to_leaf(&test_wrong_value);
-        assert_eq!(wrong_leaf, Err(SemaphoreError::ArrayTooLong));
+        assert_eq!(wrong_leaf, Err(SemaphoreError::InputSizeExceeded(33)));
     }
 
     #[test]

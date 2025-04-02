@@ -68,7 +68,7 @@ impl Identity {
     /// Signs a message
     pub fn sign_message(&self, message: &[u8]) -> Result<Signature, SemaphoreError> {
         if message.len() > 32 {
-            return Err(SemaphoreError::MessageTooLong);
+            return Err(SemaphoreError::MessageSizeExceeded(message.len()));
         }
 
         // Hash the private key and prune
@@ -156,15 +156,15 @@ impl Signature {
     /// Verifies against a public key and message
     pub fn verify(&self, public_key: &EdwardsAffine, message: &[u8]) -> Result<(), SemaphoreError> {
         if message.len() > 32 {
-            return Err(SemaphoreError::MessageTooLong);
+            return Err(SemaphoreError::MessageSizeExceeded(message.len()));
         }
 
         if !self.r.is_on_curve() {
-            return Err(SemaphoreError::SignatureNotOnCurve);
+            return Err(SemaphoreError::SignaturePointNotOnCurve);
         }
 
         if !public_key.is_on_curve() {
-            return Err(SemaphoreError::InvalidPublicKey);
+            return Err(SemaphoreError::PublicKeyNotOnCurve);
         }
 
         // Compute challenge scalar
@@ -192,7 +192,7 @@ impl Signature {
 
         // s * generator = nonce + challenge * public_key
         if left != right {
-            return Err(SemaphoreError::InvalidSignature);
+            return Err(SemaphoreError::SignatureVerificationFailed);
         }
 
         Ok(())
