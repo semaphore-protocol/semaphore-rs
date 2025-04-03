@@ -99,6 +99,7 @@ pub const BASE_Y: Fq =
 #[cfg(test)]
 mod tests {
     //! Implementation of the tests presented in the EIP-2494
+
     use super::*;
     use ark_ec::CurveGroup;
     use ark_ff::{PrimeField, Zero};

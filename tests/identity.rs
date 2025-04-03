@@ -87,12 +87,12 @@ mod identity {
         let identity = Identity::new(&PRIVATE_KEY_BYTES);
 
         // Verify generated public key
-        assert_eq!(PUBLIC_KEY_STR, identity.public_key().to_string());
+        assert_eq!(PUBLIC_KEY_STR, identity.public_key().point().to_string());
         assert_eq!(
             PUBLIC_KEY_X_BYTES,
             identity
                 .public_key()
-                .x
+                .x()
                 .into_bigint()
                 .to_bytes_be()
                 .to_vec()
@@ -102,7 +102,7 @@ mod identity {
             PUBLIC_KEY_Y_BYTES,
             identity
                 .public_key()
-                .y
+                .y()
                 .into_bigint()
                 .to_bytes_be()
                 .to_vec()

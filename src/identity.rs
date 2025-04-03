@@ -20,7 +20,7 @@ pub struct Identity {
     /// Secret scalar
     secret_scalar: Fr,
     /// Public key
-    public_key: EdwardsAffine,
+    public_key: PublicKey,
     /// Identity commitment
     commitment: Fq,
 }
@@ -32,10 +32,10 @@ impl Identity {
         let secret_scalar = Self::gen_secret_scalar(private_key);
 
         // Get the public key by multiplying the secret scalar by the base point
-        let public_key = BabyJubjubConfig::GENERATOR.mul(secret_scalar).into_affine();
+        let public_key = PublicKey::from_scalar(&secret_scalar);
 
-        // Get the commitment by hashing the public key
-        let commitment: Fq = Self::gen_commitment(&public_key);
+        // Generate the identity commitment
+        let commitment = public_key.commitment();
 
         Self {
             private_key: private_key.to_vec(),
@@ -56,7 +56,7 @@ impl Identity {
     }
 
     /// Returns the public key
-    pub fn public_key(&self) -> &EdwardsAffine {
+    pub fn public_key(&self) -> &PublicKey {
         &self.public_key
     }
 
@@ -94,8 +94,8 @@ impl Identity {
         let poseidon_inputs = [
             r.x,
             r.y,
-            self.public_key.x,
-            self.public_key.y,
+            self.public_key.x(),
+            self.public_key.y(),
             Fq::from_be_bytes_mod_order(message),
         ];
         let c_fq = Poseidon::<Fq>::new_circom(5)
@@ -111,14 +111,6 @@ impl Identity {
         let s = k_fr + c_fr * secret_scalar;
 
         Ok(Signature::new(r, s))
-    }
-
-    /// Generates a commitment from a public key
-    pub fn gen_commitment(public_key: &EdwardsAffine) -> Fq {
-        Poseidon::<Fq>::new_circom(2)
-            .unwrap()
-            .hash(&[public_key.x, public_key.y])
-            .unwrap()
     }
 
     /// Generates the secret scalar from the private key
@@ -138,6 +130,49 @@ impl Identity {
     }
 }
 
+/// Semaphore public key
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublicKey {
+    point: EdwardsAffine,
+}
+
+impl PublicKey {
+    /// Creates a new public key instance from a point
+    pub fn from_point(point: EdwardsAffine) -> Self {
+        Self { point }
+    }
+
+    /// Creates a new subgroup public key from a scalar
+    pub fn from_scalar(secret_scalar: &Fr) -> Self {
+        let point = BabyJubjubConfig::GENERATOR.mul(secret_scalar).into_affine();
+
+        Self { point }
+    }
+
+    /// Generates an identity commitment
+    pub fn commitment(&self) -> Fq {
+        Poseidon::<Fq>::new_circom(2)
+            .unwrap()
+            .hash(&[self.point.x, self.point.y])
+            .unwrap()
+    }
+
+    /// Returns the public key point in Affine form
+    pub fn point(&self) -> EdwardsAffine {
+        self.point
+    }
+
+    /// Returns the x coordinate of the public key point
+    pub fn x(&self) -> Fq {
+        self.point.x
+    }
+
+    /// Returns the y coordinate of the public key point
+    pub fn y(&self) -> Fq {
+        self.point.y
+    }
+}
+
 /// Signature
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Signature {
@@ -154,7 +189,7 @@ impl Signature {
     }
 
     /// Verifies against a public key and message
-    pub fn verify(&self, public_key: &EdwardsAffine, message: &[u8]) -> Result<(), SemaphoreError> {
+    pub fn verify(&self, public_key: &PublicKey, message: &[u8]) -> Result<(), SemaphoreError> {
         if message.len() > 32 {
             return Err(SemaphoreError::MessageSizeExceeded(message.len()));
         }
@@ -163,7 +198,7 @@ impl Signature {
             return Err(SemaphoreError::SignaturePointNotOnCurve);
         }
 
-        if !public_key.is_on_curve() {
+        if !public_key.point().is_on_curve() {
             return Err(SemaphoreError::PublicKeyNotOnCurve);
         }
 
@@ -171,8 +206,8 @@ impl Signature {
         let poseidon_inputs = [
             self.r.x,
             self.r.y,
-            public_key.x,
-            public_key.y,
+            public_key.x(),
+            public_key.y(),
             Fq::from_be_bytes_mod_order(message),
         ];
         let c_fq = Poseidon::<Fq>::new_circom(5)
@@ -188,7 +223,7 @@ impl Signature {
         let left = BabyJubjubConfig::GENERATOR.mul(self.s);
 
         // nonce + challenge * public_key
-        let right = self.r + public_key.mul(c_fr).into_affine();
+        let right = self.r + public_key.point().mul(c_fr);
 
         // s * generator = nonce + challenge * public_key
         if left != right {
