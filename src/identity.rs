@@ -4,7 +4,7 @@ use crate::{
     baby_jubjub::{BabyJubjubConfig, EdwardsAffine},
     error::SemaphoreError,
 };
-use ark_ec::{CurveConfig, CurveGroup, twisted_edwards::TECurveConfig};
+use ark_ec::{twisted_edwards::TECurveConfig, CurveConfig, CurveGroup};
 use ark_ed_on_bn254::{Fq, Fr};
 use ark_ff::{BigInteger, PrimeField};
 use blake::Blake;
