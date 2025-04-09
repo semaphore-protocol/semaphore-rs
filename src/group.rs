@@ -47,7 +47,6 @@ pub struct Group {
     /// Hashed LeanIMT
     pub tree: HashedLeanIMT<ELEMENT_SIZE, PoseidonHash>,
 }
-pub type MerkleProof = LeanIMTMerkleProof;
 
 impl Group {
     /// Creates a new instance of the Group with optional initial members

@@ -1,5 +1,5 @@
 use crate::{
-    group::{Group, MerkleProof},
+    group::{Group, MerkleProof, EMPTY_LEAF},
     identity::Identity,
     utils::{hash, to_big_uint},
     MAX_TREE_DEPTH, MIN_TREE_DEPTH,
@@ -91,7 +91,7 @@ impl Proof {
             if let Some(sibling) = merkle_proof.siblings.get(i as usize) {
                 merkle_proof_siblings.push(sibling.clone());
             } else {
-                merkle_proof_siblings.push("0".to_string());
+                merkle_proof_siblings.push(EMPTY_LEAF.to_string());
             }
         }
 
