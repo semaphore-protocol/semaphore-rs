@@ -180,9 +180,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.17"
+version = "1.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fcb57c740ae1daf453ae85f16e37396f672b039e00d9d866e07ddb24e328e3a"
+checksum = "525046617d8376e3db1deffb079e91cef90a89fc3ca5c185bbf8c9ecdd15cd5c"
 dependencies = [
  "shlex",
 ]
@@ -285,6 +285,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "itoa"
+version = "1.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
+
+[[package]]
 name = "libc"
 version = "0.2.171"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -301,6 +307,12 @@ dependencies = [
  "num-bigint",
  "thiserror 1.0.69",
 ]
+
+[[package]]
+name = "memchr"
+version = "2.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "num-bigint"
@@ -396,6 +408,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 
 [[package]]
+name = "ryu"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
+
+[[package]]
 name = "semaphore-rs"
 version = "0.1.0"
 dependencies = [
@@ -405,6 +423,8 @@ dependencies = [
  "blake",
  "light-poseidon",
  "num-bigint",
+ "serde",
+ "serde_json",
  "thiserror 2.0.12",
  "zk-kit-lean-imt",
 ]
@@ -427,6 +447,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.140"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
+dependencies = [
+ "itoa",
+ "memchr",
+ "ryu",
+ "serde",
 ]
 
 [[package]]
@@ -567,7 +599,7 @@ dependencies = [
 [[package]]
 name = "zk-kit-lean-imt"
 version = "0.1.0"
-source = "git+https://github.com/brech1/zk-kit.rust?branch=feat%2Fgeneric-tree#92cf18fe6f9749416829e6ca9456518d18b52b6c"
+source = "git+https://github.com/brech1/zk-kit.rust?branch=feat%2Fgeneric-tree#fd9d98bd29bbbfc48d89df2db9beae78aff85e7a"
 dependencies = [
  "serde",
  "thiserror 2.0.12",

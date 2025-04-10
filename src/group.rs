@@ -1,3 +1,9 @@
+//! Group module
+//!
+//! This module is a wrapper around the `HashedLeanIMT` struct with some utility methods.
+//!
+//! Leaves and nodes are the same size, 32 bytes.
+
 use crate::error::SemaphoreError;
 use ark_ed_on_bn254::Fq;
 use ark_ff::{BigInteger, PrimeField};
@@ -7,18 +13,20 @@ use zk_kit_lean_imt::{
     lean_imt::MerkleProof,
 };
 
-/// Size of elements in bytes
+/// Size of nodes and leaves in bytes
 pub const ELEMENT_SIZE: usize = 32;
+/// Empty element
+pub const EMPTY_ELEMENT: Element = [0u8; ELEMENT_SIZE];
 
-/// Leaf type representing a 32-byte array
-pub type Leaf = [u8; ELEMENT_SIZE];
+/// Element type alias
+pub type Element = [u8; ELEMENT_SIZE];
 
 /// Poseidon LeanIMT hasher
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct PoseidonHash;
 
-impl LeanIMTHasher for PoseidonHash {
-    fn hash(input: &[u8]) -> Vec<u8> {
+impl LeanIMTHasher<ELEMENT_SIZE> for PoseidonHash {
+    fn hash(input: &[u8]) -> [u8; ELEMENT_SIZE] {
         let hash = Poseidon::<Fq>::new_circom(2)
             .expect("Failed to initialize Poseidon")
             .hash(&[
@@ -27,53 +35,42 @@ impl LeanIMTHasher for PoseidonHash {
             ])
             .expect("Poseidon hash failed");
 
-        fq_to_leaf(&hash).to_vec()
+        let mut hash_bytes = [0u8; ELEMENT_SIZE];
+        hash_bytes.copy_from_slice(&hash.into_bigint().to_bytes_le());
+
+        hash_bytes
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Group {
-    pub tree: HashedLeanIMT<PoseidonHash>,
-}
-
-impl Default for Group {
-    fn default() -> Self {
-        Group {
-            tree: HashedLeanIMT::<PoseidonHash>::new(&[], PoseidonHash).unwrap(),
-        }
-    }
+    /// Hashed LeanIMT
+    pub tree: HashedLeanIMT<ELEMENT_SIZE, PoseidonHash>,
 }
 
 impl Group {
     /// Creates a new instance of the Group with optional initial members
-    pub fn new(members: &[Leaf]) -> Result<Self, SemaphoreError> {
-        let leaves: Vec<Vec<u8>> = match members.len() {
-            0 => Vec::new(),
-            _ => {
-                let mut leaves = Vec::new();
+    pub fn new(members: &[Element]) -> Result<Self, SemaphoreError> {
+        if members.is_empty() {
+            return Ok(Group {
+                tree: HashedLeanIMT::<ELEMENT_SIZE, PoseidonHash>::new(&[], PoseidonHash)?,
+            });
+        }
 
-                for &member in members {
-                    if member == [0u8; ELEMENT_SIZE] {
-                        return Err(SemaphoreError::EmptyLeaf);
-                    }
-
-                    leaves.push(member.to_vec());
-                }
-                leaves
+        for &member in members {
+            if member == EMPTY_ELEMENT {
+                return Err(SemaphoreError::EmptyLeaf);
             }
-        };
+        }
 
         Ok(Group {
-            tree: HashedLeanIMT::<PoseidonHash>::new(&leaves, PoseidonHash)?,
+            tree: HashedLeanIMT::<ELEMENT_SIZE, PoseidonHash>::new(members, PoseidonHash)?,
         })
     }
 
     /// Returns the root hash of the tree, or None if the tree is empty
-    pub fn root(&self) -> Option<Leaf> {
-        match self.tree.root() {
-            Some(r) => bytes_to_leaf(&r).ok(),
-            None => None,
-        }
+    pub fn root(&self) -> Option<Element> {
+        self.tree.root()
     }
 
     /// Returns the depth of the tree
@@ -87,7 +84,7 @@ impl Group {
     }
 
     /// Returns the group members
-    pub fn members(&self) -> Vec<Leaf> {
+    pub fn members(&self) -> Vec<Element> {
         self.tree
             .leaves()
             .iter()
@@ -96,13 +93,13 @@ impl Group {
     }
 
     /// Returns the index of a member if it exists
-    pub fn index_of(&self, member: Leaf) -> Option<usize> {
+    pub fn index_of(&self, member: Element) -> Option<usize> {
         self.tree.index_of(&member)
     }
 
     /// Adds a new member to the group
-    pub fn add_member(&mut self, member: Leaf) -> Result<(), SemaphoreError> {
-        if member == [0u8; ELEMENT_SIZE] {
+    pub fn add_member(&mut self, member: Element) -> Result<(), SemaphoreError> {
+        if member == EMPTY_ELEMENT {
             return Err(SemaphoreError::EmptyLeaf);
         }
 
@@ -111,25 +108,20 @@ impl Group {
     }
 
     /// Adds a set of members to the group
-    pub fn add_members(&mut self, members: Vec<Leaf>) -> Result<(), SemaphoreError> {
-        let mut members_vec: Vec<Vec<u8>> = Vec::new();
-
-        for member in members {
-            if member == [0u8; ELEMENT_SIZE] {
+    pub fn add_members(&mut self, members: Vec<Element>) -> Result<(), SemaphoreError> {
+        for member in &members {
+            if *member == EMPTY_ELEMENT {
                 return Err(SemaphoreError::EmptyLeaf);
             }
-
-            members_vec.push(member.to_vec());
         }
 
-        self.tree.insert_many(&members_vec)?;
-
+        self.tree.insert_many(&members)?;
         Ok(())
     }
 
     /// Updates a group member
-    pub fn update_member(&mut self, index: usize, member: Leaf) -> Result<(), SemaphoreError> {
-        if self.members()[index] == [0u8; ELEMENT_SIZE] {
+    pub fn update_member(&mut self, index: usize, member: Element) -> Result<(), SemaphoreError> {
+        if self.members()[index] == EMPTY_ELEMENT {
             return Err(SemaphoreError::RemovedMember);
         }
 
@@ -139,50 +131,76 @@ impl Group {
 
     /// Removes a member from the group
     pub fn remove_member(&mut self, index: usize) -> Result<(), SemaphoreError> {
-        if self.members()[index] == [0u8; ELEMENT_SIZE] {
+        if self.members()[index] == EMPTY_ELEMENT {
             return Err(SemaphoreError::AlreadyRemovedMember);
         }
 
-        self.tree.update(index, &[0u8; ELEMENT_SIZE])?;
+        self.tree.update(index, &EMPTY_ELEMENT)?;
         Ok(())
     }
 
     /// Creates a proof of membership for a member
-    pub fn generate_proof(&self, index: usize) -> Result<MerkleProof, SemaphoreError> {
+    pub fn generate_proof(
+        &self,
+        index: usize,
+    ) -> Result<MerkleProof<ELEMENT_SIZE>, SemaphoreError> {
         self.tree
             .generate_proof(index)
             .map_err(SemaphoreError::LeanIMTError)
     }
 
     /// Verifies a proof of membership for a member
-    pub fn verify_proof(proof: &MerkleProof) -> bool {
-        HashedLeanIMT::<PoseidonHash>::verify_proof(proof)
+    pub fn verify_proof(proof: &MerkleProof<ELEMENT_SIZE>) -> bool {
+        HashedLeanIMT::<ELEMENT_SIZE, PoseidonHash>::verify_proof(proof)
     }
 }
 
-/// Converts a byte array to a Leaf
-pub fn bytes_to_leaf(bytes: &[u8]) -> Result<Leaf, SemaphoreError> {
+#[cfg(feature = "serde")]
+impl Group {
+    /// Exports the LeanIMT tree to a JSON.
+    pub fn export(&self) -> Result<String, SemaphoreError> {
+        serde_json::to_string(&self.tree.tree())
+            .map_err(|e| SemaphoreError::SerializationError(e.to_string()))
+    }
+
+    /// Imports a Group from a JSON string representing a LeanIMT tree.
+    pub fn import(json: &str) -> Result<Self, SemaphoreError> {
+        let lean_imt_tree: zk_kit_lean_imt::lean_imt::LeanIMT<ELEMENT_SIZE> =
+            serde_json::from_str(json)
+                .map_err(|e| SemaphoreError::SerializationError(e.to_string()))?;
+
+        Ok(Group {
+            tree: zk_kit_lean_imt::hashed_tree::HashedLeanIMT::new_from_tree(
+                lean_imt_tree,
+                PoseidonHash,
+            ),
+        })
+    }
+}
+
+/// Converts a byte array to an element
+pub fn bytes_to_element(bytes: &[u8]) -> Result<Element, SemaphoreError> {
     if bytes.len() > ELEMENT_SIZE {
         return Err(SemaphoreError::InputSizeExceeded(bytes.len()));
     }
 
-    let mut leaf = [0; ELEMENT_SIZE];
-    leaf[..bytes.len()].copy_from_slice(bytes);
+    let mut element = EMPTY_ELEMENT;
+    element[..bytes.len()].copy_from_slice(bytes);
 
-    Ok(leaf)
+    Ok(element)
 }
 
-/// Converts a scalar to a Leaf
-pub fn fq_to_leaf(fq: &Fq) -> Leaf {
-    let mut leaf = [0; ELEMENT_SIZE];
+/// Converts a scalar to an element
+pub fn fq_to_element(fq: &Fq) -> Element {
+    let mut element = EMPTY_ELEMENT;
     let bytes = fq.into_bigint().to_bytes_le();
-    leaf[..bytes.len()].copy_from_slice(&bytes);
-    leaf
+    element[..bytes.len()].copy_from_slice(&bytes);
+    element
 }
 
-/// Converts a Leaf to a scalar
-pub fn leaf_to_fq(leaf: &Leaf) -> Fq {
-    Fq::from_le_bytes_mod_order(leaf)
+/// Converts an element to a scalar
+pub fn element_to_fq(element: &Element) -> Fq {
+    Fq::from_le_bytes_mod_order(element)
 }
 
 #[cfg(test)]
@@ -195,14 +213,14 @@ mod tests {
             59, 227, 30, 252, 212, 244, 251, 255, 228, 174, 31, 212, 161, 61, 184, 169, 200, 50, 7,
             84, 65, 96,
         ];
-        let leaf = bytes_to_leaf(&test_bytes).unwrap();
-        let fq = leaf_to_fq(&leaf);
-        let leaf_back = fq_to_leaf(&fq);
+        let element = bytes_to_element(&test_bytes).unwrap();
+        let fq = element_to_fq(&element);
+        let element_back = fq_to_element(&fq);
 
-        assert_eq!(leaf, leaf_back);
+        assert_eq!(element, element_back);
         assert_eq!(fq, Fq::from_le_bytes_mod_order(&test_bytes));
         assert_eq!(
-            bytes_to_leaf(&[0; 33]),
+            bytes_to_element(&[0; 33]),
             Err(SemaphoreError::InputSizeExceeded(33))
         );
     }
@@ -224,7 +242,7 @@ mod tests {
 
         let group1 = Group::new(&[member1, member2, member3]).unwrap();
 
-        let mut group2 = Group::new(&[]).unwrap();
+        let mut group2 = Group::default();
         group2.add_member(member1).unwrap();
         group2.add_member(member2).unwrap();
         group2.add_member(member3).unwrap();
@@ -383,7 +401,21 @@ mod tests {
         let mut proof_1 = group.generate_proof(1).unwrap();
         assert_eq!(Group::verify_proof(&proof_1), true);
 
-        proof_1.leaf = member1.to_vec();
+        proof_1.leaf = member1;
         assert_eq!(Group::verify_proof(&proof_1), false);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_export_import() {
+        let member1 = [1; 32];
+        let member2 = [2; 32];
+        let member3 = [3; 32];
+        let group = Group::new(&[member1, member2, member3]).unwrap();
+
+        let json = group.export().unwrap();
+        let imported_group = Group::import(&json).unwrap();
+
+        assert_eq!(group, imported_group);
     }
 }

@@ -23,6 +23,8 @@ pub enum SemaphoreError {
     SignaturePointNotOnCurve,
     #[error("Signature verification failed")]
     SignatureVerificationFailed,
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
 }
 
 impl From<LeanIMTError> for SemaphoreError {

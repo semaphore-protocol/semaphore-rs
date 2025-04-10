@@ -71,18 +71,18 @@ mod group {
     use ark_ed_on_bn254::Fq;
     use ark_ff::{BigInteger, PrimeField};
     use num_bigint::BigInt;
-    use semaphore_rs::group::{Group, Leaf};
+    use semaphore_rs::group::{EMPTY_ELEMENT, Element, Group};
     use std::str::FromStr;
 
-    fn str_to_leaf(s: &str) -> Leaf {
+    fn str_to_element(s: &str) -> Element {
         let big_int = BigInt::from_str(s).unwrap();
         let fq = Fq::from_le_bytes_mod_order(&big_int.to_bytes_le().1);
 
-        let mut leaf = [0; 32];
+        let mut element = EMPTY_ELEMENT;
 
         let bytes = fq.into_bigint().to_bytes_le();
-        leaf[..bytes.len()].copy_from_slice(&bytes);
-        leaf
+        element[..bytes.len()].copy_from_slice(&bytes);
+        element
     }
 
     fn leaf_to_str(leaf: &[u8]) -> String {
@@ -96,13 +96,13 @@ mod group {
         assert_eq!(group.root(), None);
         assert_eq!(group.depth(), 0);
         assert_eq!(group.size(), 0);
-        assert_eq!(group.members(), Vec::<Leaf>::new());
+        assert_eq!(group.members(), Vec::<Element>::new());
     }
 
     #[test]
     fn initial_members() {
-        let leaves: Vec<Leaf> = INITIAL_MEMBERS.iter().map(|s| str_to_leaf(s)).collect();
-        let group = Group::new(&leaves).unwrap();
+        let elements: Vec<Element> = INITIAL_MEMBERS.iter().map(|s| str_to_element(s)).collect();
+        let group = Group::new(&elements).unwrap();
 
         let root = group.root().unwrap();
         assert_eq!(leaf_to_str(&root), INITIAL_MEMBERS_ROOT_STR);
@@ -122,10 +122,10 @@ mod group {
     #[test]
     fn add_members() {
         let mut group = Group::default();
-        let leaves: Vec<Leaf> = ADDED_MEMBERS.iter().map(|s| str_to_leaf(s)).collect();
-        group.add_members(leaves).unwrap();
+        let elements: Vec<Element> = ADDED_MEMBERS.iter().map(|s| str_to_element(s)).collect();
+        group.add_members(elements).unwrap();
 
-        let root = group.root().expect("Root should exist");
+        let root = group.root().unwrap();
         assert_eq!(leaf_to_str(&root), ADD_MEMBERS_ROOT_STR);
         assert_eq!(group.depth(), 1);
         assert_eq!(group.size(), 2);
@@ -142,23 +142,23 @@ mod group {
 
     #[test]
     fn index_lookup() {
-        let leaves: Vec<Leaf> = INITIAL_MEMBERS.iter().map(|s| str_to_leaf(s)).collect();
-        let group = Group::new(&leaves).unwrap();
+        let elements: Vec<Element> = INITIAL_MEMBERS.iter().map(|s| str_to_element(s)).collect();
+        let group = Group::new(&elements).unwrap();
 
         assert_eq!(
-            group.index_of(str_to_leaf(INDEX_LOOKUP_EXISTING_MEMBER)),
+            group.index_of(str_to_element(INDEX_LOOKUP_EXISTING_MEMBER)),
             Some(INDEX_LOOKUP_EXISTING_INDEX)
         );
         assert_eq!(
-            group.index_of(str_to_leaf(INDEX_LOOKUP_NON_EXISTING_MEMBER)),
+            group.index_of(str_to_element(INDEX_LOOKUP_NON_EXISTING_MEMBER)),
             None
         );
     }
 
     #[test]
     fn merkle_proof() {
-        let leaves: Vec<Leaf> = INITIAL_MEMBERS.iter().map(|s| str_to_leaf(s)).collect();
-        let group = Group::new(&leaves).unwrap();
+        let elements: Vec<Element> = INITIAL_MEMBERS.iter().map(|s| str_to_element(s)).collect();
+        let group = Group::new(&elements).unwrap();
 
         let proof = group.generate_proof(MERKLE_PROOF_INDEX).unwrap();
 
@@ -178,7 +178,7 @@ mod group {
         assert_eq!(Group::verify_proof(&proof), true);
 
         let mut invalid_proof = proof.clone();
-        invalid_proof.leaf = str_to_leaf(INDEX_LOOKUP_NON_EXISTING_MEMBER).to_vec();
+        invalid_proof.leaf = str_to_element(INDEX_LOOKUP_NON_EXISTING_MEMBER);
         assert_eq!(Group::verify_proof(&invalid_proof), false);
 
         assert!(group.generate_proof(MERKLE_PROOF_INVALID_INDEX).is_err());
@@ -186,14 +186,14 @@ mod group {
 
     #[test]
     fn update_member() {
-        let leaves: Vec<Leaf> = UPDATE_MEMBER_BEFORE
+        let elements: Vec<Element> = UPDATE_MEMBER_BEFORE
             .iter()
-            .map(|s| str_to_leaf(s))
+            .map(|s| str_to_element(s))
             .collect();
-        let mut group = Group::new(&leaves).unwrap();
+        let mut group = Group::new(&elements).unwrap();
 
         group
-            .update_member(UPDATE_MEMBER_INDEX, str_to_leaf(UPDATE_NEW_VALUE))
+            .update_member(UPDATE_MEMBER_INDEX, str_to_element(UPDATE_NEW_VALUE))
             .unwrap();
 
         let root = group.root().unwrap();
@@ -210,21 +210,21 @@ mod group {
     #[test]
     fn sequential_operations() {
         let mut group = Group::default();
-        let initial_leaves: Vec<Leaf> = SEQUENTIAL_OPS_INITIAL
+        let initial_elements: Vec<Element> = SEQUENTIAL_OPS_INITIAL
             .iter()
-            .map(|s| str_to_leaf(s))
+            .map(|s| str_to_element(s))
             .collect();
 
-        group.add_members(initial_leaves).unwrap();
+        group.add_members(initial_elements).unwrap();
         group
-            .add_member(str_to_leaf("400000000000000000000000000000"))
+            .add_member(str_to_element("400000000000000000000000000000"))
             .unwrap();
         group
-            .update_member(1, str_to_leaf("500000000000000000000000000000"))
+            .update_member(1, str_to_element("500000000000000000000000000000"))
             .unwrap();
         group.remove_member(2).unwrap();
 
-        let root = group.root().expect("Root should exist");
+        let root = group.root().unwrap();
         assert_eq!(leaf_to_str(&root), SEQUENTIAL_OPS_ROOT_STR);
         assert_eq!(group.depth(), 2);
         assert_eq!(group.size(), 4);
