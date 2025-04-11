@@ -1,21 +1,20 @@
 use crate::{
-    group::{Group, MerkleProof, EMPTY_LEAF},
-    identity::Identity,
-    utils::{hash, to_big_uint},
     MAX_TREE_DEPTH, MIN_TREE_DEPTH,
+    group::{EMPTY_ELEMENT, Element, Group, MerkleProof},
+    identity::Identity,
+    utils::{hash, to_big_uint, to_element},
 };
-use anyhow::{bail, Ok, Result};
+use anyhow::{Ok, Result, bail};
 use circom_prover::{
+    CircomProver,
     prover::{
-        circom::{self, CURVE_BN254, G1, G2, PROTOCOL_GROTH16},
         CircomProof, ProofLib, PublicInputs,
+        circom::{self, CURVE_BN254, G1, G2, PROTOCOL_GROTH16},
     },
     witness::WitnessFn,
-    CircomProver,
 };
-use leanimt_rs::LeanIMTNode;
 use num_bigint::BigUint;
-use num_traits::{identities::One, Zero};
+use num_traits::{Zero, identities::One};
 use std::{collections::HashMap, str::FromStr};
 
 // Prepare witness generator
@@ -31,21 +30,13 @@ pub enum GroupOrMerkleProof {
 }
 
 impl GroupOrMerkleProof {
-    fn merkle_proof(&self, leaf: &LeanIMTNode) -> MerkleProof {
+    fn merkle_proof(&self, leaf: &Element) -> MerkleProof {
         match self {
             GroupOrMerkleProof::Group(group) => {
-                let idx = group.index_of(leaf).expect("The identity does not exist");
-                group.generate_merkle_proof(idx).unwrap()
+                let idx = group.index_of(*leaf).expect("The identity does not exist");
+                group.generate_proof(idx).unwrap()
             }
-            GroupOrMerkleProof::MerkleProof(proof) => {
-                // A workaourd because `LeanIMTMerkleProof` doesn"t impl `clone` trait
-                MerkleProof {
-                    root: proof.root.clone(),
-                    leaf: proof.leaf.clone(),
-                    index: proof.index.clone(),
-                    siblings: proof.siblings.clone(),
-                }
-            }
+            GroupOrMerkleProof::MerkleProof(proof) => proof.clone(),
         }
     }
 }
@@ -78,20 +69,20 @@ impl Proof {
             ));
         }
 
-        let merkle_proof = group.merkle_proof(&identity.commitment.to_string());
+        let merkle_proof = group.merkle_proof(&to_element(identity.commitment().clone()));
         let merkle_proof_length = merkle_proof.siblings.len();
 
         // The index must be converted to a list of indices, 1 for each tree level.
         // The missing siblings can be set to 0, as they won"t be used in the circuit.
         let mut merkle_proof_indices = Vec::new();
-        let mut merkle_proof_siblings = Vec::new();
+        let mut merkle_proof_siblings = Vec::<Element>::new();
         for i in 0..merkle_tree_depth {
             merkle_proof_indices.push((merkle_proof.index >> i) & 1);
 
             if let Some(sibling) = merkle_proof.siblings.get(i as usize) {
                 merkle_proof_siblings.push(sibling.clone());
             } else {
-                merkle_proof_siblings.push(EMPTY_LEAF.to_string());
+                merkle_proof_siblings.push(EMPTY_ELEMENT);
             }
         }
 
@@ -100,7 +91,7 @@ impl Proof {
         let inputs = HashMap::from([
             (
                 "secret".to_string(),
-                vec![identity.secret_scalar.to_string()],
+                vec![identity.secret_scalar().to_string()],
             ),
             (
                 "merkleProofLength".to_string(),
@@ -110,7 +101,13 @@ impl Proof {
                 "merkleProofIndices".to_string(),
                 merkle_proof_indices.iter().map(|i| i.to_string()).collect(),
             ),
-            ("merkleProofSiblings".to_string(), merkle_proof_siblings),
+            (
+                "merkleProofSiblings".to_string(),
+                merkle_proof_siblings
+                    .iter()
+                    .map(|s| BigUint::from_bytes_le(s.to_vec().as_ref()).to_string())
+                    .collect(),
+            ),
             ("scope".to_string(), vec![hash(scope_uint.clone())]),
             ("message".to_string(), vec![hash(message_uint.clone())]),
         ]);
@@ -124,7 +121,7 @@ impl Proof {
 
         Ok(SemaphoreProof {
             merkle_tree_depth,
-            merkle_tree_root: BigUint::from_str(merkle_proof.root.as_ref()).unwrap(),
+            merkle_tree_root: BigUint::from_bytes_le(merkle_proof.root.as_ref()),
             message: message_uint,
             nullifier: circom_proof.pub_inputs.0.get(1).unwrap().clone(),
             scope: scope_uint,
@@ -196,14 +193,21 @@ impl Proof {
 
 #[cfg(test)]
 mod tests {
-    use super::{GroupOrMerkleProof, Proof};
-    use crate::{group::Group, identity::Identity, proof::SemaphoreProof};
+    use super::*;
+    use crate::{
+        group::{Element, Group},
+        identity::Identity,
+        proof::SemaphoreProof,
+    };
     use num_bigint::BigUint;
     use std::str::FromStr;
 
     const TREE_DEPTH: usize = 10;
     const MESSAGE: &str = "Hello world";
     const SCOPE: &str = "Scope";
+
+    const MEMBER1: Element = [1; 32];
+    const MEMBER2: Element = [2; 32];
 
     #[cfg(test)]
     mod gen_proof {
@@ -212,12 +216,9 @@ mod tests {
 
         #[test]
         fn test_proof() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let mut group = Group::new(vec![
-                "1".to_string(),
-                "2".to_string(),
-                identity.commitment.to_string(),
-            ]);
+            let identity = Identity::new("secret".as_bytes());
+            let group =
+                Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
             let root = group.root().unwrap();
 
             let proof = Proof::generate_proof(
@@ -229,13 +230,13 @@ mod tests {
             )
             .unwrap();
 
-            assert_eq!(proof.merkle_tree_root.to_string(), root);
+            assert_eq!(proof.merkle_tree_root, BigUint::from_bytes_le(&root));
         }
 
         #[test]
         fn test_proof_1_member() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let mut group = Group::new(vec![identity.commitment.to_string()]);
+            let identity = Identity::new("secret".as_bytes());
+            let group = Group::new(&[to_element(*identity.commitment())]).unwrap();
             let root = group.root().unwrap();
 
             let proof = Proof::generate_proof(
@@ -247,39 +248,33 @@ mod tests {
             )
             .unwrap();
 
-            assert_eq!(proof.merkle_tree_root.to_string(), root);
+            assert_eq!(proof.merkle_tree_root, BigUint::from_bytes_le(&root));
         }
 
         #[test]
         fn test_proof_with_semaphore_proof() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let mut group = Group::new(vec![
-                "1".to_string(),
-                "2".to_string(),
-                identity.commitment.to_string(),
-            ]);
+            let identity = Identity::new("secret".as_bytes());
+            let group =
+                Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
             let root = group.root().unwrap();
 
             let proof = Proof::generate_proof(
                 identity,
-                GroupOrMerkleProof::MerkleProof(group.generate_merkle_proof(2).unwrap()),
+                GroupOrMerkleProof::MerkleProof(group.generate_proof(2).unwrap()),
                 MESSAGE.to_string(),
                 SCOPE.to_string(),
                 TREE_DEPTH as u16,
             )
             .unwrap();
 
-            assert_eq!(proof.merkle_tree_root.to_string(), root);
+            assert_eq!(proof.merkle_tree_root, BigUint::from_bytes_le(&root));
         }
 
         #[test]
         fn test_error_invalid_tree_depth() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let group = Group::new(vec![
-                "1".to_string(),
-                "2".to_string(),
-                identity.commitment.to_string(),
-            ]);
+            let identity = Identity::new("secret".as_bytes());
+            let group =
+                Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
 
             let result = Proof::generate_proof(
                 identity,
@@ -299,8 +294,8 @@ mod tests {
 
         #[test]
         fn test_panic_id_not_in_group() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let group = Group::new(vec!["1".to_string(), "2".to_string()]);
+            let identity = Identity::new("secret".as_bytes());
+            let group = Group::new(&[MEMBER1, MEMBER2]).unwrap();
 
             let err = panic::catch_unwind(AssertUnwindSafe(|| {
                 Proof::generate_proof(
@@ -323,12 +318,9 @@ mod tests {
 
         #[test]
         fn test_panic_message_over_32bytes() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let group = Group::new(vec![
-                "1".to_string(),
-                "2".to_string(),
-                identity.commitment.to_string(),
-            ]);
+            let identity = Identity::new("secret".as_bytes());
+            let group =
+                Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
 
             let err = panic::catch_unwind(AssertUnwindSafe(|| {
                 Proof::generate_proof(
@@ -351,12 +343,9 @@ mod tests {
 
         #[test]
         fn test_panic_scope_over_32bytes() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let group = Group::new(vec![
-                "1".to_string(),
-                "2".to_string(),
-                identity.commitment.to_string(),
-            ]);
+            let identity = Identity::new("secret".as_bytes());
+            let group =
+                Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
 
             let err = panic::catch_unwind(AssertUnwindSafe(|| {
                 Proof::generate_proof(
@@ -385,12 +374,9 @@ mod tests {
 
         #[test]
         fn test_verify_proof() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let group = Group::new(vec![
-                "1".to_string(),
-                "2".to_string(),
-                identity.commitment.to_string(),
-            ]);
+            let identity = Identity::new("secret".as_bytes());
+            let group =
+                Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
 
             let proof = Proof::generate_proof(
                 identity,
@@ -406,12 +392,9 @@ mod tests {
 
         #[test]
         fn test_panic_verify_invalid_tree_depth() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let group = Group::new(vec![
-                "1".to_string(),
-                "2".to_string(),
-                identity.commitment.to_string(),
-            ]);
+            let identity = Identity::new("secret".as_bytes());
+            let group =
+                Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
 
             let mut proof = Proof::generate_proof(
                 identity,
@@ -434,16 +417,13 @@ mod tests {
 
         #[test]
         fn test_error_verify_invalid_proof() {
-            let identity = Identity::new("secret".as_bytes().to_vec());
-            let group = Group::new(vec![
-                "1".to_string(),
-                "2".to_string(),
-                identity.commitment.to_string(),
-            ]);
+            let identity = Identity::new("secret".as_bytes());
+            let group =
+                Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
 
             let proof = Proof::generate_proof(
                 identity,
-                GroupOrMerkleProof::MerkleProof(group.generate_merkle_proof(0).unwrap()),
+                GroupOrMerkleProof::MerkleProof(group.generate_proof(0).unwrap()),
                 MESSAGE.to_string(),
                 SCOPE.to_string(),
                 TREE_DEPTH as u16,
@@ -499,4 +479,3 @@ mod tests {
         }
     }
 }
-*/
