@@ -26,7 +26,7 @@ pub fn to_big_uint(str: &String) -> BigUint {
     BigUint::from_bytes_be(&fixed_bytes)
 }
 
-/// Converts Fq to Element in little-endian orfer
+/// Converts Fq to Element in little-endian order
 pub fn to_element(value: Fq) -> Element {
     let mut element = EMPTY_ELEMENT;
     let bytes = value.into_bigint().to_bytes_le();
