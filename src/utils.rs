@@ -22,7 +22,7 @@ pub fn to_big_uint(str: &String) -> BigUint {
     let bytes = str.as_bytes();
     assert!(bytes.len() <= 32, "BigUint too large: exceeds 32 bytes");
     let mut fixed_bytes = [0u8; 32];
-    fixed_bytes[0..bytes.len()].copy_from_slice(&bytes);
+    fixed_bytes[0..bytes.len()].copy_from_slice(bytes);
     BigUint::from_bytes_be(&fixed_bytes)
 }
 

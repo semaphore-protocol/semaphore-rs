@@ -62,14 +62,14 @@ impl Proof {
         merkle_tree_depth: u16,
     ) -> Result<SemaphoreProof> {
         // check tree depth
-        if merkle_tree_depth < MIN_TREE_DEPTH || merkle_tree_depth > MAX_TREE_DEPTH {
+        if !(MIN_TREE_DEPTH..=MAX_TREE_DEPTH).contains(&merkle_tree_depth) {
             bail!(format!(
                 "The tree depth must be a number between {} and {}",
                 MIN_TREE_DEPTH, MAX_TREE_DEPTH
             ));
         }
 
-        let merkle_proof = group.merkle_proof(&to_element(identity.commitment().clone()));
+        let merkle_proof = group.merkle_proof(&to_element(*identity.commitment()));
         let merkle_proof_length = merkle_proof.siblings.len();
 
         // The index must be converted to a list of indices, 1 for each tree level.
@@ -80,7 +80,7 @@ impl Proof {
             merkle_proof_indices.push((merkle_proof.index >> i) & 1);
 
             if let Some(sibling) = merkle_proof.siblings.get(i as usize) {
-                merkle_proof_siblings.push(sibling.clone());
+                merkle_proof_siblings.push(*sibling);
             } else {
                 merkle_proof_siblings.push(EMPTY_ELEMENT);
             }
