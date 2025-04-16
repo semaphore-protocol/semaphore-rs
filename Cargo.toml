@@ -12,6 +12,8 @@ ruint = "1.14.0"
 num-traits = "0.2.19"
 ethers-core = "2.0.14"
 anyhow = "1.0.97"
+reqwest = { version = "0.12.15", features = ["blocking", "json"] } 
+tokio = { version = "1", features = ["full"] }
 
 # arkworks
 ark-ec = { version = "=0.5.0", default-features = false }
@@ -40,3 +42,4 @@ serde = [
 
 [build-dependencies]
 rust-witness = "0.1"
+reqwest = { version = "0.12.15", features = ["blocking", "json"] } 
