@@ -10,7 +10,7 @@ use ark_ff::{BigInteger, PrimeField};
 use light_poseidon::{Poseidon, PoseidonHasher};
 use zk_kit_lean_imt::{
     hashed_tree::{HashedLeanIMT, LeanIMTHasher},
-    lean_imt::MerkleProof,
+    lean_imt,
 };
 
 /// Size of nodes and leaves in bytes
@@ -20,6 +20,9 @@ pub const EMPTY_ELEMENT: Element = [0u8; ELEMENT_SIZE];
 
 /// Element type alias
 pub type Element = [u8; ELEMENT_SIZE];
+
+/// Merkle proof alias
+pub type MerkleProof = lean_imt::MerkleProof<ELEMENT_SIZE>;
 
 /// Poseidon LeanIMT hasher
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -140,17 +143,14 @@ impl Group {
     }
 
     /// Creates a proof of membership for a member
-    pub fn generate_proof(
-        &self,
-        index: usize,
-    ) -> Result<MerkleProof<ELEMENT_SIZE>, SemaphoreError> {
+    pub fn generate_proof(&self, index: usize) -> Result<MerkleProof, SemaphoreError> {
         self.tree
             .generate_proof(index)
             .map_err(SemaphoreError::LeanIMTError)
     }
 
     /// Verifies a proof of membership for a member
-    pub fn verify_proof(proof: &MerkleProof<ELEMENT_SIZE>) -> bool {
+    pub fn verify_proof(proof: &MerkleProof) -> bool {
         HashedLeanIMT::<ELEMENT_SIZE, PoseidonHash>::verify_proof(proof)
     }
 }
