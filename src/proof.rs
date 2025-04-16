@@ -155,10 +155,10 @@ impl Proof {
         [
             p.a.x,
             p.a.y,
-            p.b.x[0].clone(),
             p.b.x[1].clone(),
-            p.b.y[0].clone(),
+            p.b.x[0].clone(),
             p.b.y[1].clone(),
+            p.b.y[0].clone(),
             p.c.x,
             p.c.y,
         ]
@@ -171,8 +171,8 @@ impl Proof {
             z: BigUint::one(),
         };
         let b = G2 {
-            x: [packed[2].clone(), packed[3].clone()],
-            y: [packed[4].clone(), packed[5].clone()],
+            x: [packed[3].clone(), packed[2].clone()],
+            y: [packed[5].clone(), packed[4].clone()],
             z: [BigUint::one(), BigUint::zero()],
         };
         let c = G1 {
@@ -433,11 +433,8 @@ mod tests {
             assert_eq!(Proof::verify_proof(proof), false)
         }
 
-        // TODO fix it and remove #[ignore]
-        // https://github.com/zkmopro/mopro/issues/396
         // This test case is to test a semaphore-js proof can be verified by semaphore-rs verifier.
         #[test]
-        #[ignore]
         fn test_semaphore_js_proof() {
             let points = [
                 // Proof generated from `Semaphore-js`
