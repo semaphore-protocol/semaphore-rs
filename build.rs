@@ -56,6 +56,10 @@ fn main() {
         .parse()
         .expect("SEMAPHORE_DEPTH must be a valid usize");
 
+    if depth > 32 {
+        panic!("The tree depth must be less than 32.");
+    }
+
     download_semaphore_artifacts(depth).expect("Failed to download artifacts");
 
     rust_witness::transpile::transpile_wasm("./zkey".to_string());
