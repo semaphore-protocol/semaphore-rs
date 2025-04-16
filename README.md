@@ -67,3 +67,19 @@
 
 All tasks related to the Semaphore Rust implementation are public. You can track their progress, statuses, and additional details in the [Semaphore Rust view](https://github.com/orgs/semaphore-protocol/projects/10/views/29).
 
+
+
+## 🛠 Install
+
+Clone this repository:
+
+```bash
+git clone git@github.com:semaphore-protocol/semaphore-rs.git
+```
+
+Semaphore uses `Circom-Prover` to generate zero-knowledge proofs for `Circom` circuits. Since `Circom-Prover` generates the witness function at build time, developers must specify the Merkle tree depth during compilation. This can be done by setting the `SEMAPHORE_DEPTH` environment variable:
+
+```bash
+cd semaphore-rs
+SEMAPHORE_DEPTH=<tree depth> cargo build
+```
