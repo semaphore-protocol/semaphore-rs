@@ -7,11 +7,8 @@
 use crate::error::SemaphoreError;
 use ark_ed_on_bn254::Fq;
 use ark_ff::{BigInteger, PrimeField};
+use lean_imt::hashed_tree::{HashedLeanIMT, LeanIMTHasher};
 use light_poseidon::{Poseidon, PoseidonHasher};
-use zk_kit_lean_imt::{
-    hashed_tree::{HashedLeanIMT, LeanIMTHasher},
-    lean_imt,
-};
 
 /// Size of nodes and leaves in bytes
 pub const ELEMENT_SIZE: usize = 32;
@@ -22,7 +19,7 @@ pub const EMPTY_ELEMENT: Element = [0u8; ELEMENT_SIZE];
 pub type Element = [u8; ELEMENT_SIZE];
 
 /// Merkle proof alias
-pub type MerkleProof = lean_imt::MerkleProof<ELEMENT_SIZE>;
+pub type MerkleProof = lean_imt::lean_imt::MerkleProof<ELEMENT_SIZE>;
 
 /// Poseidon LeanIMT hasher
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -165,15 +162,12 @@ impl Group {
 
     /// Imports a Group from a JSON string representing a LeanIMT tree.
     pub fn import(json: &str) -> Result<Self, SemaphoreError> {
-        let lean_imt_tree: zk_kit_lean_imt::lean_imt::LeanIMT<ELEMENT_SIZE> =
+        let lean_imt_tree: lean_imt::lean_imt::LeanIMT<ELEMENT_SIZE> =
             serde_json::from_str(json)
                 .map_err(|e| SemaphoreError::SerializationError(e.to_string()))?;
 
         Ok(Group {
-            tree: zk_kit_lean_imt::hashed_tree::HashedLeanIMT::new_from_tree(
-                lean_imt_tree,
-                PoseidonHash,
-            ),
+            tree: HashedLeanIMT::new_from_tree(lean_imt_tree, PoseidonHash),
         })
     }
 }

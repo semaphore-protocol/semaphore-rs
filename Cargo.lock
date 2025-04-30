@@ -3566,7 +3566,8 @@ dependencies = [
 [[package]]
 name = "zk-kit-lean-imt"
 version = "0.1.0"
-source = "git+https://github.com/brech1/zk-kit.rust?branch=feat%2Fgeneric-tree#fd9d98bd29bbbfc48d89df2db9beae78aff85e7a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dd2ef671845634af5f8e3c28962b6d7d9ab49c69ce4a4a09d35e7a697cbf321"
 dependencies = [
  "serde",
  "thiserror 2.0.12",
