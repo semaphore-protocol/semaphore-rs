@@ -22,17 +22,16 @@ zk-kit-lean-imt = "0.1.0"
 
 # serde
 serde = { version = "1", features = ["derive"], optional = true }
-serde_json = { version = "1", optional = true }
+serde_json = "1"
 
 # circom-prover
 rust-witness = "0.1"
 circom-prover = "=0.1.1"
 
 [features]
-default = ["serde"]
+default = []
 serde = [
     "dep:serde",
-    "serde_json",
     "zk-kit-lean-imt/serde"  
 ]
 
