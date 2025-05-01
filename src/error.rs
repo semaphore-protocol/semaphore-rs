@@ -1,7 +1,7 @@
 //! Error Module
 
+use lean_imt::lean_imt::LeanIMTError;
 use thiserror::Error;
-use zk_kit_lean_imt::lean_imt::LeanIMTError;
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum SemaphoreError {
