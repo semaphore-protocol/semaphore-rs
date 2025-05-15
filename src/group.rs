@@ -115,7 +115,7 @@ impl Group {
             }
         }
 
-        self.tree.insert_many(&members)?;
+        self.tree.insert_many(members)?;
         Ok(())
     }
 
