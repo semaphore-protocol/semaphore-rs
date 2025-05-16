@@ -123,7 +123,7 @@ mod group {
     fn add_members() {
         let mut group = Group::default();
         let elements: Vec<Element> = ADDED_MEMBERS.iter().map(|s| str_to_element(s)).collect();
-        group.add_members(elements).unwrap();
+        group.add_members(&elements).unwrap();
 
         let root = group.root().unwrap();
         assert_eq!(leaf_to_str(&root), ADD_MEMBERS_ROOT_STR);
@@ -215,7 +215,7 @@ mod group {
             .map(|s| str_to_element(s))
             .collect();
 
-        group.add_members(initial_elements).unwrap();
+        group.add_members(&initial_elements).unwrap();
         group
             .add_member(str_to_element("400000000000000000000000000000"))
             .unwrap();

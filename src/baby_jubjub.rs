@@ -2,7 +2,7 @@
 //!
 //! This is an append to the the `ark-ed-on-bn254` crate to use the EIP-2494 defined Baby Jubjub curve parameters.
 //!
-//! - https://eips.ethereum.org/EIPS/eip-2494
+//! - <https://eips.ethereum.org/EIPS/eip-2494>
 //!
 //! - Base field: q = 21888242871839275222246405745257275088548364400416034343698204186575808495617
 //! - Scalar field: r = 2736030358979909402780800718157159386076813972158567259200215660948447373041

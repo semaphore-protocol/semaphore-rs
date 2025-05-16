@@ -108,14 +108,14 @@ impl Group {
     }
 
     /// Adds a set of members to the group
-    pub fn add_members(&mut self, members: Vec<Element>) -> Result<(), SemaphoreError> {
-        for member in &members {
-            if *member == EMPTY_ELEMENT {
+    pub fn add_members(&mut self, members: &[Element]) -> Result<(), SemaphoreError> {
+        for &member in members {
+            if member == EMPTY_ELEMENT {
                 return Err(SemaphoreError::EmptyLeaf);
             }
         }
 
-        self.tree.insert_many(&members)?;
+        self.tree.insert_many(members)?;
         Ok(())
     }
 
@@ -282,7 +282,7 @@ mod tests {
         let member1 = [1; 32];
         let member2 = [2; 32];
 
-        group.add_members(vec![member1, member2]).unwrap();
+        group.add_members(&[member1, member2]).unwrap();
 
         assert_eq!(group.size(), 2);
     }
@@ -293,7 +293,7 @@ mod tests {
         let member1 = [1; 32];
         let zero = [0u8; ELEMENT_SIZE];
 
-        let result = group.add_members(vec![member1, zero]);
+        let result = group.add_members(&[member1, zero]);
 
         assert!(result.is_err());
         assert_eq!(result, Err(SemaphoreError::EmptyLeaf));
@@ -305,7 +305,7 @@ mod tests {
         let member2 = [2; 32];
         let mut group = Group::default();
 
-        group.add_members(vec![member1, member2]).unwrap();
+        group.add_members(&[member1, member2]).unwrap();
         let index = group.index_of(member2);
 
         assert_eq!(index, Some(1));
@@ -317,7 +317,7 @@ mod tests {
         let member2 = [2; 32];
         let mut group = Group::default();
 
-        group.add_members(vec![member1, member2]).unwrap();
+        group.add_members(&[member1, member2]).unwrap();
 
         group.update_member(0, member1).unwrap();
         assert_eq!(group.size(), 2);
@@ -332,7 +332,7 @@ mod tests {
         let member2 = [2; 32];
         let mut group = Group::default();
 
-        group.add_members(vec![member1, member2]).unwrap();
+        group.add_members(&[member1, member2]).unwrap();
         group.remove_member(0).unwrap();
 
         let result = group.update_member(0, member1);
@@ -346,7 +346,7 @@ mod tests {
         let member2 = [2; 32];
         let mut group = Group::default();
 
-        group.add_members(vec![member1, member2]).unwrap();
+        group.add_members(&[member1, member2]).unwrap();
         group.remove_member(0).unwrap();
 
         let members = group.members();
@@ -360,7 +360,7 @@ mod tests {
         let member2 = [2; 32];
         let mut group = Group::default();
 
-        group.add_members(vec![member1, member2]).unwrap();
+        group.add_members(&[member1, member2]).unwrap();
         group.remove_member(0).unwrap();
 
         let result = group.remove_member(0);
@@ -375,7 +375,7 @@ mod tests {
         let member2 = [2; 32];
         let mut group = Group::default();
 
-        group.add_members(vec![member1, member2]).unwrap();
+        group.add_members(&[member1, member2]).unwrap();
 
         let proof = group.generate_proof(0).unwrap();
         assert_eq!(proof.leaf, member1);
@@ -387,7 +387,7 @@ mod tests {
         let member2 = [2; 32];
         let mut group = Group::default();
 
-        group.add_members(vec![member1, member2]).unwrap();
+        group.add_members(&[member1, member2]).unwrap();
 
         let proof_0 = group.generate_proof(0).unwrap();
         assert_eq!(Group::verify_proof(&proof_0), true);
