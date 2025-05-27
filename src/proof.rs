@@ -108,25 +108,15 @@ impl Proof {
             ("message".to_string(), vec![hash(message_uint.clone())]),
         ]);
 
-        let start = Instant::now();
         let zkey_path = download_zkey(merkle_tree_depth).expect("Failed to download zkey");
-        let duration = start.elapsed();
-        println!("download zkey time: {:?}", duration.as_micros());
-
-        let start = Instant::now();
         let witness_fn = dispatch_witness(merkle_tree_depth);
-        let duration = start.elapsed();
-        println!("dispatch witness time: {:?}", duration.as_micros());
 
-        let start = Instant::now();
         let circom_proof = CircomProver::prove(
             ProofLib::Arkworks,
             WitnessFn::CircomWitnessCalc(witness_fn),
             serde_json::to_string(&inputs).unwrap(),
             zkey_path,
         )?;
-        let duration = start.elapsed();
-        println!("semaphore proof time: {:?}", duration.as_micros());
 
         Ok(SemaphoreProof {
             merkle_tree_depth,
@@ -403,7 +393,6 @@ mod tests {
         #[test]
         fn test_verify_proof_with_different_depth() {
             for depth in MIN_TREE_DEPTH..=MAX_TREE_DEPTH {
-                println!("Testing depth: {}", depth);
                 let identity = Identity::new("secret".as_bytes());
                 let group =
                     Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
