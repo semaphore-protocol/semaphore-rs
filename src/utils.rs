@@ -7,7 +7,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::copy;
 
-use crate::group::{Element, EMPTY_ELEMENT};
+use crate::group::{EMPTY_ELEMENT, Element};
 
 pub fn string_to_biguint(num_str: &str) -> BigUint {
     num_str

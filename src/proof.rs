@@ -1,21 +1,21 @@
 use crate::{
-    group::{Element, Group, MerkleProof, EMPTY_ELEMENT},
+    MAX_TREE_DEPTH, MIN_TREE_DEPTH,
+    group::{EMPTY_ELEMENT, Element, Group, MerkleProof},
     identity::Identity,
     utils::{download_zkey, hash, to_big_uint, to_element},
     witness::dispatch_witness,
-    MAX_TREE_DEPTH, MIN_TREE_DEPTH,
 };
-use anyhow::{bail, Ok, Result};
+use anyhow::{Ok, Result, bail};
 use circom_prover::{
+    CircomProver,
     prover::{
-        circom::{self, CURVE_BN254, G1, G2, PROTOCOL_GROTH16},
         CircomProof, ProofLib, PublicInputs,
+        circom::{self, CURVE_BN254, G1, G2, PROTOCOL_GROTH16},
     },
     witness::WitnessFn,
-    CircomProver,
 };
 use num_bigint::BigUint;
-use num_traits::{identities::One, Zero};
+use num_traits::{Zero, identities::One};
 use std::{collections::HashMap, str::FromStr, time::Instant};
 
 pub type PackedGroth16Proof = [BigUint; 8];
