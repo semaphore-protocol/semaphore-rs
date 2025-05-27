@@ -33,6 +33,11 @@ jobs:
         with:
           toolchain: stable
           override: true
+      - name: install requirements
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: protobuf-compiler
+          version: 1.0
       - name: Run tests
         run: cargo test
   
