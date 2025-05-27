@@ -16,7 +16,7 @@ use circom_prover::{
 };
 use num_bigint::BigUint;
 use num_traits::{Zero, identities::One};
-use std::{collections::HashMap, str::FromStr, time::Instant};
+use std::{collections::HashMap, str::FromStr};
 
 pub type PackedGroth16Proof = [BigUint; 8];
 

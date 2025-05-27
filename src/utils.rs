@@ -44,14 +44,12 @@ pub fn download_zkey(depth: u16) -> Result<String, Box<dyn Error>> {
     let filename = format!("semaphore-{}.zkey", depth);
     let out_dir = std::env::temp_dir();
     let dest_path = out_dir.join(filename.clone());
-    if dest_path.exists() {
-        return Ok(dest_path.to_string_lossy().into_owned());
+    if !dest_path.exists() {
+        let url = format!("{}{}", base_url, filename);
+        let client = Client::new();
+        let mut resp = client.get(&url).send()?.error_for_status()?;
+        let mut out = File::create(&dest_path)?;
+        copy(&mut resp, &mut out)?;
     }
-    let url = format!("{}{}", base_url, filename);
-    let client = Client::new();
-    let mut resp = client.get(&url).send()?.error_for_status()?;
-    let mut out = File::create(&dest_path)?;
-    copy(&mut resp, &mut out)?;
-    eprintln!("Saved as {}", dest_path.display());
     Ok(dest_path.to_string_lossy().into_owned())
 }
