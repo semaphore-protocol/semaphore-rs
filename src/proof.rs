@@ -1,28 +1,24 @@
 use crate::{
-    MAX_TREE_DEPTH, MIN_TREE_DEPTH,
-    group::{EMPTY_ELEMENT, Element, Group, MerkleProof},
+    group::{Element, Group, MerkleProof, EMPTY_ELEMENT},
     identity::Identity,
-    utils::{hash, to_big_uint, to_element},
+    utils::{download_zkey, hash, to_big_uint, to_element},
+    witness::dispatch_witness,
+    MAX_TREE_DEPTH, MIN_TREE_DEPTH,
 };
-use anyhow::{Ok, Result, bail};
+use anyhow::{bail, Ok, Result};
 use circom_prover::{
-    CircomProver,
     prover::{
-        CircomProof, ProofLib, PublicInputs,
         circom::{self, CURVE_BN254, G1, G2, PROTOCOL_GROTH16},
+        CircomProof, ProofLib, PublicInputs,
     },
     witness::WitnessFn,
+    CircomProver,
 };
 use num_bigint::BigUint;
-use num_traits::{Zero, identities::One};
-use std::{collections::HashMap, str::FromStr};
-
-// Prepare witness generator
-rust_witness::witness!(semaphore);
+use num_traits::{identities::One, Zero};
+use std::{collections::HashMap, str::FromStr, time::Instant};
 
 pub type PackedGroth16Proof = [BigUint; 8];
-
-const ZKEY_PATH: &str = "./zkey/semaphore.zkey";
 
 pub enum GroupOrMerkleProof {
     Group(Group),
@@ -112,12 +108,25 @@ impl Proof {
             ("message".to_string(), vec![hash(message_uint.clone())]),
         ]);
 
+        let start = Instant::now();
+        let zkey_path = download_zkey(merkle_tree_depth).expect("Failed to download zkey");
+        let duration = start.elapsed();
+        println!("download zkey time: {:?}", duration.as_micros());
+
+        let start = Instant::now();
+        let witness_fn = dispatch_witness(merkle_tree_depth);
+        let duration = start.elapsed();
+        println!("dispatch witness time: {:?}", duration.as_micros());
+
+        let start = Instant::now();
         let circom_proof = CircomProver::prove(
             ProofLib::Arkworks,
-            WitnessFn::RustWitness(semaphore_witness),
+            WitnessFn::CircomWitnessCalc(witness_fn),
             serde_json::to_string(&inputs).unwrap(),
-            ZKEY_PATH.to_string(),
+            zkey_path,
         )?;
+        let duration = start.elapsed();
+        println!("semaphore proof time: {:?}", duration.as_micros());
 
         Ok(SemaphoreProof {
             merkle_tree_depth,
@@ -148,7 +157,8 @@ impl Proof {
             pub_inputs,
         };
 
-        CircomProver::verify(ProofLib::Arkworks, p, ZKEY_PATH.to_string()).unwrap()
+        let zkey_path = download_zkey(proof.merkle_tree_depth).expect("Failed to download zkey");
+        CircomProver::verify(ProofLib::Arkworks, p, zkey_path).unwrap()
     }
 
     pub fn pack_groth16_proof(p: circom::Proof) -> PackedGroth16Proof {
@@ -388,6 +398,27 @@ mod tests {
             .unwrap();
 
             assert!(Proof::verify_proof(proof))
+        }
+
+        #[test]
+        fn test_verify_proof_with_different_depth() {
+            for depth in MIN_TREE_DEPTH..=MAX_TREE_DEPTH {
+                println!("Testing depth: {}", depth);
+                let identity = Identity::new("secret".as_bytes());
+                let group =
+                    Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
+
+                let proof = Proof::generate_proof(
+                    identity,
+                    GroupOrMerkleProof::Group(group),
+                    MESSAGE.to_string(),
+                    SCOPE.to_string(),
+                    depth as u16,
+                )
+                .unwrap();
+
+                assert!(Proof::verify_proof(proof));
+            }
         }
 
         #[test]
