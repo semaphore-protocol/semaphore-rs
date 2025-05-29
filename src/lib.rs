@@ -9,6 +9,7 @@ pub mod group;
 pub mod identity;
 pub mod proof;
 pub mod utils;
+pub mod witness;
 
 pub const MIN_TREE_DEPTH: u16 = 1;
 pub const MAX_TREE_DEPTH: u16 = 32;

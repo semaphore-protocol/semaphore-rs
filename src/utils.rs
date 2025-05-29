@@ -2,6 +2,10 @@ use ark_ed_on_bn254::Fq;
 use ark_ff::{BigInteger, PrimeField};
 use ethers_core::utils::keccak256;
 use num_bigint::BigUint;
+use reqwest::blocking::Client;
+use std::error::Error;
+use std::fs::File;
+use std::io::copy;
 
 use crate::group::{EMPTY_ELEMENT, Element};
 
@@ -32,4 +36,20 @@ pub fn to_element(value: Fq) -> Element {
     let bytes = value.into_bigint().to_bytes_le();
     element[..bytes.len()].copy_from_slice(&bytes);
     element
+}
+
+/// Download zkey from artifacts: https://snark-artifacts.pse.dev/
+pub fn download_zkey(depth: u16) -> Result<String, Box<dyn Error>> {
+    let base_url = "https://snark-artifacts.pse.dev/semaphore/latest/";
+    let filename = format!("semaphore-{}.zkey", depth);
+    let out_dir = std::env::temp_dir();
+    let dest_path = out_dir.join(filename.clone());
+    if !dest_path.exists() {
+        let url = format!("{}{}", base_url, filename);
+        let client = Client::new();
+        let mut resp = client.get(&url).send()?.error_for_status()?;
+        let mut out = File::create(&dest_path)?;
+        copy(&mut resp, &mut out)?;
+    }
+    Ok(dest_path.to_string_lossy().into_owned())
 }

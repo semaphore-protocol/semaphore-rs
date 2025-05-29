@@ -2,7 +2,8 @@ use crate::{
     MAX_TREE_DEPTH, MIN_TREE_DEPTH,
     group::{EMPTY_ELEMENT, Element, Group, MerkleProof},
     identity::Identity,
-    utils::{hash, to_big_uint, to_element},
+    utils::{download_zkey, hash, to_big_uint, to_element},
+    witness::dispatch_witness,
 };
 use anyhow::{Ok, Result, bail};
 use circom_prover::{
@@ -17,12 +18,7 @@ use num_bigint::BigUint;
 use num_traits::{Zero, identities::One};
 use std::{collections::HashMap, str::FromStr};
 
-// Prepare witness generator
-rust_witness::witness!(semaphore);
-
 pub type PackedGroth16Proof = [BigUint; 8];
-
-const ZKEY_PATH: &str = "./zkey/semaphore.zkey";
 
 pub enum GroupOrMerkleProof {
     Group(Group),
@@ -112,11 +108,14 @@ impl Proof {
             ("message".to_string(), vec![hash(message_uint.clone())]),
         ]);
 
+        let zkey_path = download_zkey(merkle_tree_depth).expect("Failed to download zkey");
+        let witness_fn = dispatch_witness(merkle_tree_depth);
+
         let circom_proof = CircomProver::prove(
             ProofLib::Arkworks,
-            WitnessFn::RustWitness(semaphore_witness),
+            WitnessFn::CircomWitnessCalc(witness_fn),
             serde_json::to_string(&inputs).unwrap(),
-            ZKEY_PATH.to_string(),
+            zkey_path,
         )?;
 
         Ok(SemaphoreProof {
@@ -148,7 +147,8 @@ impl Proof {
             pub_inputs,
         };
 
-        CircomProver::verify(ProofLib::Arkworks, p, ZKEY_PATH.to_string()).unwrap()
+        let zkey_path = download_zkey(proof.merkle_tree_depth).expect("Failed to download zkey");
+        CircomProver::verify(ProofLib::Arkworks, p, zkey_path).unwrap()
     }
 
     pub fn pack_groth16_proof(p: circom::Proof) -> PackedGroth16Proof {
@@ -388,6 +388,26 @@ mod tests {
             .unwrap();
 
             assert!(Proof::verify_proof(proof))
+        }
+
+        #[test]
+        fn test_verify_proof_with_different_depth() {
+            for depth in MIN_TREE_DEPTH..=MAX_TREE_DEPTH {
+                let identity = Identity::new("secret".as_bytes());
+                let group =
+                    Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
+
+                let proof = Proof::generate_proof(
+                    identity,
+                    GroupOrMerkleProof::Group(group),
+                    MESSAGE.to_string(),
+                    SCOPE.to_string(),
+                    depth as u16,
+                )
+                .unwrap();
+
+                assert!(Proof::verify_proof(proof));
+            }
         }
 
         #[test]
