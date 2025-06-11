@@ -44,5 +44,5 @@ jobs:
           packages: protobuf-compiler
           version: 1.0
       - name: Run tests
-        run: cargo test
+        run: cargo test --all-features
   
