@@ -39,12 +39,12 @@ impl GroupOrMerkleProof {
 
 #[derive(Debug, Clone)]
 pub struct SemaphoreProof {
-    merkle_tree_depth: u16,
-    merkle_tree_root: BigUint,
-    message: BigUint,
-    nullifier: BigUint,
-    scope: BigUint,
-    points: PackedGroth16Proof,
+    pub merkle_tree_depth: u16,
+    pub merkle_tree_root: BigUint,
+    pub message: BigUint,
+    pub nullifier: BigUint,
+    pub scope: BigUint,
+    pub points: PackedGroth16Proof,
 }
 
 pub struct Proof {}
@@ -231,6 +231,8 @@ mod tests {
             .unwrap();
 
             assert_eq!(proof.merkle_tree_root, BigUint::from_bytes_le(&root));
+            assert_eq!(proof.message, to_big_uint(&MESSAGE.to_string()));
+            assert_eq!(proof.scope, to_big_uint(&SCOPE.to_string()));
         }
 
         #[test]
