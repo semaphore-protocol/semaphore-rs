@@ -1,3 +1,5 @@
+#[cfg(feature = "serde")]
+use crate::error::SemaphoreError;
 use crate::{
     MAX_TREE_DEPTH, MIN_TREE_DEPTH,
     group::{EMPTY_ELEMENT, Element, Group, MerkleProof},
@@ -37,14 +39,68 @@ impl GroupOrMerkleProof {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SemaphoreProof {
-    merkle_tree_depth: u16,
-    merkle_tree_root: BigUint,
-    message: BigUint,
-    nullifier: BigUint,
-    scope: BigUint,
-    points: PackedGroth16Proof,
+    pub merkle_tree_depth: u16,
+    pub merkle_tree_root: BigUint,
+    pub message: BigUint,
+    pub nullifier: BigUint,
+    pub scope: BigUint,
+    pub points: PackedGroth16Proof,
+}
+
+#[cfg(feature = "serde")]
+impl SemaphoreProof {
+    pub fn export(&self) -> Result<String, SemaphoreError> {
+        let mut json = serde_json::Map::new();
+        json.insert(
+            "merkle_tree_depth".to_string(),
+            self.merkle_tree_depth.into(),
+        );
+        json.insert(
+            "merkle_tree_root".to_string(),
+            self.merkle_tree_root.to_string().into(),
+        );
+        json.insert("message".to_string(), self.message.to_string().into());
+        json.insert("nullifier".to_string(), self.nullifier.to_string().into());
+        json.insert("scope".to_string(), self.scope.to_string().into());
+        json.insert(
+            "points".to_string(),
+            self.points
+                .to_vec()
+                .into_iter()
+                .map(|p| p.to_string())
+                .collect::<Vec<String>>()
+                .into(),
+        );
+        serde_json::to_string(&json).map_err(|e| SemaphoreError::SerializationError(e.to_string()))
+    }
+
+    pub fn import(json: &str) -> Result<Self, SemaphoreError> {
+        let json: serde_json::Map<String, serde_json::Value> = serde_json::from_str(json)
+            .map_err(|e| SemaphoreError::SerializationError(e.to_string()))?;
+        Ok(SemaphoreProof {
+            merkle_tree_depth: json.get("merkle_tree_depth").unwrap().as_u64().unwrap() as u16,
+            merkle_tree_root: BigUint::from_str(
+                json.get("merkle_tree_root").unwrap().as_str().unwrap(),
+            )
+            .unwrap(),
+            message: BigUint::from_str(json.get("message").unwrap().as_str().unwrap()).unwrap(),
+            nullifier: BigUint::from_str(json.get("nullifier").unwrap().as_str().unwrap()).unwrap(),
+            scope: BigUint::from_str(json.get("scope").unwrap().as_str().unwrap()).unwrap(),
+            points: json
+                .get("points")
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|p| BigUint::from_str(p.as_str().unwrap()).unwrap())
+                .collect::<Vec<BigUint>>()
+                .try_into()
+                .unwrap(),
+        })
+        .map_err(|e| SemaphoreError::SerializationError(e.to_string()))
+    }
 }
 
 pub struct Proof {}
@@ -231,6 +287,8 @@ mod tests {
             .unwrap();
 
             assert_eq!(proof.merkle_tree_root, BigUint::from_bytes_le(&root));
+            assert_eq!(proof.message, to_big_uint(&MESSAGE.to_string()));
+            assert_eq!(proof.scope, to_big_uint(&SCOPE.to_string()));
         }
 
         #[test]
@@ -495,6 +553,27 @@ mod tests {
             };
 
             assert!(Proof::verify_proof(proof));
+        }
+
+        #[cfg(feature = "serde")]
+        #[test]
+        fn test_proof_export_import() {
+            let identity = Identity::new("secret".as_bytes());
+            let group =
+                Group::new(&[MEMBER1, MEMBER2, to_element(*identity.commitment())]).unwrap();
+            let proof = Proof::generate_proof(
+                identity,
+                GroupOrMerkleProof::Group(group),
+                MESSAGE.to_string(),
+                SCOPE.to_string(),
+                TREE_DEPTH as u16,
+            )
+            .unwrap();
+            let proof_json = proof.export().unwrap();
+            let proof_imported = SemaphoreProof::import(&proof_json).unwrap();
+            assert_eq!(proof, proof_imported);
+            let valid = Proof::verify_proof(proof_imported);
+            assert!(valid);
         }
     }
 }
