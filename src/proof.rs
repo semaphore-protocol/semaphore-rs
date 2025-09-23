@@ -124,13 +124,8 @@ impl Proof {
         let merkle_proof = group.merkle_proof(&to_element(*identity.commitment()));
         let merkle_proof_length = merkle_proof.siblings.len();
 
-        // The index must be converted to a list of indices, 1 for each tree level.
-        // The missing siblings can be set to 0, as they won"t be used in the circuit.
-        let mut merkle_proof_indices = Vec::new();
         let mut merkle_proof_siblings = Vec::<Element>::new();
         for i in 0..merkle_tree_depth {
-            merkle_proof_indices.push((merkle_proof.index >> i) & 1);
-
             if let Some(sibling) = merkle_proof.siblings.get(i as usize) {
                 merkle_proof_siblings.push(*sibling);
             } else {
@@ -150,8 +145,8 @@ impl Proof {
                 vec![merkle_proof_length.to_string()],
             ),
             (
-                "merkleProofIndices".to_string(),
-                merkle_proof_indices.iter().map(|i| i.to_string()).collect(),
+                "merkleProofIndex".to_string(),
+                vec![merkle_proof.index.to_string()],
             ),
             (
                 "merkleProofSiblings".to_string(),
