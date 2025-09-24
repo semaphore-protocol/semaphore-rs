@@ -1,3 +1,7 @@
 /target
 /zkey
 .DS_Store
+
+# witness graph
+semaphore/
+circom-witnesscalc/

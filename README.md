@@ -96,3 +96,9 @@ cargo clippy
 ```bash
 cargo test
 ```
+
+### Update `witness_graph` with [`circom-witnesscalc`](https://github.com/iden3/circom-witnesscalc)
+
+```bash
+./script build_witness_graph.sh
+```
