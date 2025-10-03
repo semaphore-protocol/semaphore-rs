@@ -67,7 +67,107 @@
 
 All tasks related to the Semaphore Rust implementation are public. You can track their progress, statuses, and additional details in the [Semaphore Rust view](https://github.com/orgs/semaphore-protocol/projects/10/views/29).
 
-## 🛠 Install
+## Semaphore Rust Package
+
+### 🛠 Install
+
+Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+semaphore-rs = "0.1"
+```
+
+### 📜 Usage
+
+#### Semaphore Identity
+
+-   Generate a semaphore identity from a string
+    ```rust
+    use semaphore_rs::identity::Identity;
+    let identity = Identity::new("secret".as_bytes());
+    ```
+-   Get the identity commitment
+    ```rust
+    identity.commitment()
+    ```
+-   Get the identity private key
+    ```rust
+    identity.private_key()
+    ```
+
+#### Semaphore Group
+
+-   Generate a group member from an identity
+
+    ```rust
+    use semaphore_rs::utils::to_element;
+    let member = to_element(*identity.commitment())
+    ```
+
+-   Generate a semaphore group from members
+    ```rust
+    use semaphore_rs::group::{Element, Group};
+    const MEMBER1: Element = [1; 32];
+    const MEMBER2: Element = [2; 32];
+    let group = Group::new(&[
+        MEMBER1,
+        MEMBER2,
+        to_element(*identity.commitment())
+    ]).unwrap();
+    ```
+-   Get the group root
+    ```rust
+    let root = group.root();
+    ```
+
+#### Semaphore Proof
+
+-   Generate a semaphore proof
+
+    ```rust
+    use semaphore_rs::proof::GroupOrMerkleProof;
+    use semaphore_rs::proof::Proof;
+
+    let message = "message";
+    let scope = "scope";
+    let tree_depth = 20;
+    let proof = Proof::generate_proof(
+        identity,
+        GroupOrMerkleProof::Group(group),
+        message.to_string(),
+        scope.to_string(),
+        tree_depth as u16,
+    )
+    .unwrap();
+    ```
+
+-   Verify a semaphore proof
+    ```rust
+    let valid = Proof::verify_proof(proof);
+    ```
+
+#### Serde
+
+-   Please enable the feature in the `Cargo.toml`
+
+    ```toml
+    semaphore-rs = { version = "0.1", features = ["serde"] }
+    ```
+
+-   Serialize a semaphore proof
+    ```rust
+    let proof_json = proof.export().unwrap();
+    ```
+-   Deserialize a semaphore proof
+    ```rust
+    use semaphore_rs::proof::SemaphoreProof;
+    let proof_imported = SemaphoreProof::import(&proof_json).unwrap();
+    ```
+
+## Development
+
+### 🛠 Install
 
 Clone this repository:
 
@@ -75,9 +175,9 @@ Clone this repository:
 git clone https://github.com/semaphore-protocol/semaphore-rs
 ```
 
-## 📜 Usage
+### 📜 Usage
 
-### Code quality and formatting
+#### Code quality and formatting
 
 Run [Rustfmt](https://github.com/rust-lang/rustfmt) to automatically format the code
 
@@ -91,13 +191,13 @@ Run [rust-clippy](https://github.com/rust-lang/rust-clippy) to catch common mist
 cargo clippy
 ```
 
-### Testing
+#### Testing
 
 ```bash
 cargo test
 ```
 
-### Update `witness_graph` with [`circom-witnesscalc`](https://github.com/iden3/circom-witnesscalc)
+#### Update `witness_graph` with [`circom-witnesscalc`](https://github.com/iden3/circom-witnesscalc)
 
 ```bash
 ./script build_witness_graph.sh
