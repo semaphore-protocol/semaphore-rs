@@ -78,7 +78,9 @@ Add this to your `Cargo.toml`:
 semaphore-rs = "0.1"
 ```
 
-### Semaphore Identity
+### 📜 Usage
+
+#### Semaphore Identity
 
 -   Generate a semaphore identity from a string
     ```rust
@@ -94,7 +96,7 @@ semaphore-rs = "0.1"
     identity.private_key()
     ```
 
-### Semaphore Group
+#### Semaphore Group
 
 -   Generate a group member from an identity
 
@@ -119,7 +121,7 @@ semaphore-rs = "0.1"
     let root = group.root();
     ```
 
-### Semaphore Proof
+#### Semaphore Proof
 
 -   Generate a semaphore proof
 
@@ -145,7 +147,7 @@ semaphore-rs = "0.1"
     let valid = Proof::verify_proof(proof);
     ```
 
-### Serde
+#### Serde
 
 -   Please enable the feature in the `Cargo.toml`
 
