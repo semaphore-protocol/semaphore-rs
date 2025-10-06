@@ -75,7 +75,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-semaphore-rs = "0.1"
+semaphore-protocol = "0.1"
 ```
 
 ### 📜 Usage
@@ -84,7 +84,7 @@ semaphore-rs = "0.1"
 
 -   Generate a semaphore identity from a string
     ```rust
-    use semaphore_rs::identity::Identity;
+    use semaphore_protocol::identity::Identity;
     let identity = Identity::new("secret".as_bytes());
     ```
 -   Get the identity commitment
@@ -101,13 +101,13 @@ semaphore-rs = "0.1"
 -   Generate a group member from an identity
 
     ```rust
-    use semaphore_rs::utils::to_element;
+    use semaphore_protocol::utils::to_element;
     let member = to_element(*identity.commitment())
     ```
 
 -   Generate a semaphore group from members
     ```rust
-    use semaphore_rs::group::{Element, Group};
+    use semaphore_protocol::group::{Element, Group};
     const MEMBER1: Element = [1; 32];
     const MEMBER2: Element = [2; 32];
     let group = Group::new(&[
@@ -126,8 +126,8 @@ semaphore-rs = "0.1"
 -   Generate a semaphore proof
 
     ```rust
-    use semaphore_rs::proof::GroupOrMerkleProof;
-    use semaphore_rs::proof::Proof;
+    use semaphore_protocol::proof::GroupOrMerkleProof;
+    use semaphore_protocol::proof::Proof;
 
     let message = "message";
     let scope = "scope";
@@ -161,7 +161,7 @@ semaphore-rs = "0.1"
     ```
 -   Deserialize a semaphore proof
     ```rust
-    use semaphore_rs::proof::SemaphoreProof;
+    use semaphore_protocol::proof::SemaphoreProof;
     let proof_imported = SemaphoreProof::import(&proof_json).unwrap();
     ```
 
