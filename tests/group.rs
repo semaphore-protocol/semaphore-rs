@@ -71,7 +71,7 @@ mod group {
     use ark_ed_on_bn254::Fq;
     use ark_ff::{BigInteger, PrimeField};
     use num_bigint::BigInt;
-    use semaphore_rs::group::{EMPTY_ELEMENT, Element, Group};
+    use semaphore::group::{EMPTY_ELEMENT, Element, Group};
     use std::str::FromStr;
 
     fn str_to_element(s: &str) -> Element {

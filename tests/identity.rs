@@ -59,7 +59,7 @@ mod identity {
     use super::*;
     use ark_ed_on_bn254::{Fq, Fr};
     use ark_ff::{AdditiveGroup, BigInteger, PrimeField};
-    use semaphore_rs::{
+    use semaphore::{
         baby_jubjub::EdwardsAffine,
         error::SemaphoreError,
         identity::{Identity, Signature},
