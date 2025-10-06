@@ -10,6 +10,9 @@ categories = ["cryptography", "zk", "semaphore"]
 documentation = "https://semaphore.pse.dev/"
 readme = "README.md"
 
+[lib]
+name = "semaphore"
+
 [dependencies]
 blake = "2.0.2"
 light-poseidon = "0.3.0"
