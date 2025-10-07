@@ -6,7 +6,7 @@ description = "Semaphore Rust Implementation"
 license = "MIT"
 repository = "https://github.com/semaphore-protocol/semaphore-rs"
 keywords = ["semaphore", "zk", "zero-knowledge", "proof", "cryptography"]
-categories = ["cryptography", "zk", "semaphore"]
+categories = ["cryptography"]
 documentation = "https://semaphore.pse.dev/"
 readme = "README.md"
 
