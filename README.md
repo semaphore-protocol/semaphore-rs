@@ -69,6 +69,12 @@ All tasks related to the Semaphore Rust implementation are public. You can track
 
 ## Semaphore Rust Package
 
+<p align="center">
+   <a href="https://crates.io/crates/semaphore-protocol">
+        <img src="https://img.shields.io/crates/v/semaphore-protocol?label=semaphore-protocol&style=flat-square">
+    </a>
+</p>
+
 ### 🛠 Install
 
 Add this to your `Cargo.toml`:
